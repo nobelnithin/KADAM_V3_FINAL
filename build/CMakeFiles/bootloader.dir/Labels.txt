@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/CMakeFiles/bootloader
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/CMakeFiles/bootloader.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/CMakeFiles/bootloader-complete.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+C:/Biostim/Firmware/KADAM_V3_FINAL/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
