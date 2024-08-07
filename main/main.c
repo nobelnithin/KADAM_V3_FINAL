@@ -60,10 +60,11 @@ static char tag[] = "mpu6050";
 
 SSD1306_t dev;
 bool isDisp_menu;
-bool isDisp_menu1=true;
-bool isDisp_menu2=false;
+int Disp_menu_count = 1;
+int pos_count = 1;
 bool isDisp_setup;
 bool isDisp_walk;
+bool isDisp_pos;
 
 xQueueHandle BTN_UPQueue;
 xQueueHandle BTN_DOWNQueue;
@@ -175,10 +176,16 @@ void disp_menu()
     isDisp_walk=false;
     isDisp_menu=true;
     char str[4];
+    char ch1 = 'F';
+    char ch2 = 'S';
     char display_str[20];
+    char display_str1[20];
+    char display_str2[20];
     int frequency = freq_list[freq_list_index];
     snprintf(str,sizeof(str),"%d",frequency);
     snprintf(display_str,sizeof(display_str)," Setup        %s",str);
+    snprintf(display_str1, sizeof(display_str1), " Position     %c", ch1);
+    snprintf(display_str2, sizeof(display_str2), " Position     %c", ch2);
     //ESP_LOGI(TAG, "State of Charge: %.2f%%", soc);
     if(soc>=75.0)
     {
@@ -197,21 +204,53 @@ void disp_menu()
         ssd1306_bitmaps(&dev, 100, 5, battery_low, 32, 17, false);
     }
 
-    if(isDisp_menu1)
+    if(Disp_menu_count==1)
     {
         
         ssd1306_display_text(&dev,3, display_str,strlen(display_str),true);
-        ssd1306_display_text(&dev, 5, " Walk        ", 16, false);
+        if(pos_count==1)
+        {
+            ssd1306_display_text(&dev,5, display_str1,strlen(display_str1),false);
+        }
+        if(pos_count==2)
+        {
+            ssd1306_display_text(&dev,5, display_str2,strlen(display_str2),false);
+        }
+        ssd1306_display_text(&dev, 7, " Walk        ", 16, false);
     }
-    if(isDisp_menu2)
+    if(Disp_menu_count==2)
     {
         
         ssd1306_display_text(&dev,3, display_str,strlen(display_str),false);
-        ssd1306_display_text(&dev, 5, " Walk          ", 16, true);
+        if(pos_count==1)
+        {
+            ssd1306_display_text(&dev,5, display_str1,strlen(display_str1),true);
+        }
+        if(pos_count==2)
+        {
+            ssd1306_display_text(&dev,5, display_str2,strlen(display_str2),true);
+        }
+
+        ssd1306_display_text(&dev, 7, " Walk        ", 16, false);
+    }
+    if(Disp_menu_count==3)
+    {
+        
+        ssd1306_display_text(&dev,3, display_str,strlen(display_str),false);
+        if(pos_count==1)
+        {
+            ssd1306_display_text(&dev,5, display_str1,strlen(display_str1),false);
+        }
+        if(pos_count==2)
+        {
+            ssd1306_display_text(&dev,5, display_str2,strlen(display_str2),false);
+        }
+        ssd1306_display_text(&dev, 7, " Walk        ", 16, true);
     }
     
 
 }
+
 
 void disp_setup()
 {
@@ -235,13 +274,13 @@ void disp_setup()
 void mpu6050_get_data(void *params)
 {
     while (1) {
-        // if(animation_running)
-        //     {      
+        if(isDisp_walk)
+            {      
                 mpu6050_read_data(&accel_x, &accel_y, &accel_z, &gyro_x, &gyro_y, &gyro_z);
                 // ESP_LOGI(TAG, "Accel X: %d, Y: %d, Z: %d", accel_x, accel_y, accel_z);
                 // ESP_LOGI(TAG, "Gyro X: %d, Y: %d, Z: %d", gyro_x, gyro_y, gyro_z);
                 printf("2000 %d %d %d -2000\n",gyro_x,gyro_y,gyro_z);
-            // }
+            }
 
         vTaskDelay(100 / portTICK_PERIOD_MS); // Delay for 1 second
     }
@@ -255,7 +294,7 @@ void fire_off_callback(void* arg) {
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
     printf("Stimulation off(timer)\n");
-    ssd1306_clear_screen(&dev, false);
+    // ssd1306_clear_screen(&dev, false);
     xQueueSend(FIRE_OFFQUEUE,&angle_roll,NULL);
     fire_on = false;
     below_neg_15 = false;
@@ -283,37 +322,28 @@ void STIMTask(void *params)
     {
         if(isDisp_setup)
         {
-
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL,STIMStrength[freq_list_index]));
-                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
                 // ets_printf("Driver on, strength set : %d \n", STIMStrength[freq_list_index]);
-                ESP_LOGI("NO TAG ","Driver on, strength set : %d \n", STIMStrength[freq_list_index]);
-                // printf("Simulation strength: %d\n",STIMStrength[freq_list_index]);
+                // ESP_LOGI("NO TAG ","Driver on, strength set : %d \n", STIMStrength[freq_list_index]);
+                printf("Simulation strength: %d\n",STIMStrength[freq_list_index]);
 
                 for(int i= 0;i<20;i++)
                 {
-                    
+        
                     gpio_set_level(IN1, 1);
                     gpio_set_level(IN2, 0);
-                    vTaskDelay(10/ portTICK_PERIOD_MS);
-                    gpio_set_level(IN1, 0);
-                    gpio_set_level(IN2, 1);
-                    vTaskDelay(10/ portTICK_PERIOD_MS);
-                    
-    
-                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
-                    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-     
-                    gpio_set_level(IN1, 0);
-                    gpio_set_level(IN2, 0);
-                    vTaskDelay(12.5/ portTICK_PERIOD_MS);
-                    
                     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, STIMStrength[freq_list_index]));
                     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-                    if(isDisp_setup==0)
-                    {
-                        break;
-                    }
+                    vTaskDelay(10 / portTICK_PERIOD_MS);
+                    gpio_set_level(IN1, 0);
+                    gpio_set_level(IN2, 1);             
+                    vTaskDelay(10 / portTICK_PERIOD_MS);
+                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
+                    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+                    gpio_set_level(IN1, 0);
+                    gpio_set_level(IN2, 0);
+                    vTaskDelay(12 / portTICK_PERIOD_MS);
+                    
+    
                 }
                 
     
@@ -323,38 +353,37 @@ void STIMTask(void *params)
     
                // ets_printf("Stimulation fired : driver off for 2 sec\n");
                 ESP_LOGI("NO TAG","Stimulation fired : driver off for 2 sec");
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
-                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+                // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
+                // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
                 vTaskDelay(2000 / portTICK_PERIOD_MS);
 
         }
         if(isDisp_setup==0){
-            gpio_set_level(IN1, 0);
-            gpio_set_level(IN2, 0);
             ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
             ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
         }
 
+
         if(isDisp_walk)
         {
-                gpio_set_level(IN1, 0);
-                gpio_set_level(IN2, 0);
-                ESP_LOGI("NO TAG","Stimulation fired : driver off for 2 sec");
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
-                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+                // gpio_set_level(IN1, 0);
+                // gpio_set_level(IN2, 0);
+                // ESP_LOGI("NO TAG","Stimulation fired : driver off for 2 sec");
+                // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
+                // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
         if(xQueueReceive(FIRE_ONQUEUE,&btn_num,portMAX_DELAY))
         {
                 printf("Stimualtion on\n");
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL,STIMStrength[1]));
-                ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-                ESP_LOGI("NO TAG ","Driver on, strength set : %d \n", STIMStrength[1]);
+                ESP_LOGI("NO TAG ","Driver on, strength set : %d \n", STIMStrength[freq_list_index]);
                 for(int i= 0;i<20;i++)
                 {
 
                     gpio_set_level(IN1, 1);
                     gpio_set_level(IN2, 0);
+                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL,STIMStrength[freq_list_index]));
+                    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
                     vTaskDelay(10/ portTICK_PERIOD_MS);
                     gpio_set_level(IN1, 0);
                     gpio_set_level(IN2, 1);
@@ -367,8 +396,8 @@ void STIMTask(void *params)
                     gpio_set_level(IN2, 0);
                     vTaskDelay(12.5/ portTICK_PERIOD_MS);
                     
-                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, STIMStrength[1]));
-                    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+                    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, STIMStrength[1]));
+                    // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
             }
 
@@ -406,17 +435,24 @@ void detect_gait(void *params)
 
     while (1) {
         // mpu6050_read_data(&accel_x, &accel_y, &accel_z, &gyro_x, &gyro_y, &gyro_z);
-        angle_roll = atan2(accel_z, sqrt(accel_x * accel_x + accel_y * accel_y)) * 180.0 / M_PI;
+        if(pos_count==1)
+        {
+          angle_roll = atan2(accel_z, sqrt(accel_x * accel_x + accel_y * accel_y)) * 180.0 / M_PI;
+        }
+        else if(pos_count==2)
+        {
+            angle_roll = atan2(accel_y, sqrt(accel_x * accel_x + accel_z * accel_z)) * 180.0 / M_PI;
+        }
         prev_value = curr_value;
 		curr_value = angle_roll;
         if(curr_value < THRESH_LOW)
 		{
-			if(trough_detected(curr_value, prev_value) && t_detect_flag && !fire_on && angle_roll<-20)
+			if(trough_detected(curr_value, prev_value) && t_detect_flag && !fire_on && angle_roll<-25)
 			{
 				//stim on
                 below_neg_15 = true; 
 				t_detect_flag = false;
-                fire_angle = prev_value+5.0;
+                fire_angle = prev_value;
                 // printf("Previous Value: %.2f   Fire angle%.2f\n",prev_value,fire_angle);
 
 			}
@@ -424,7 +460,7 @@ void detect_gait(void *params)
 
 
         if (below_neg_15 && angle_roll > fire_angle && !fire_on) {
-            ssd1306_clear_screen(&dev, true);         
+            // ssd1306_display_text_x3(&dev, 0, "Fire", 5, false);        
             printf("-----Fire ON----\n");  
             xQueueSend(FIRE_ONQUEUE,&angle_roll,NULL);
             fire_on = true;
@@ -432,10 +468,10 @@ void detect_gait(void *params)
             esp_timer_start_once(fire_timer, 750000); // 1 second in microseconds
         }
 
-        if (angle_roll > (fire_angle+50.0) && fire_on) {
+        if (angle_roll > (fire_angle+60.0) && fire_on) {
             printf("-----Fire OFF----\n");
             xQueueSend(FIRE_OFFQUEUE,&angle_roll,NULL);
-            ssd1306_clear_screen(&dev, false);
+            // ssd1306_clear_screen(&dev, false);
             fire_on = false;
             t_detect_flag = true;
             esp_timer_stop(fire_timer);
@@ -501,8 +537,11 @@ void BTN_UPTask(void *param)
             if(isDisp_menu)
             {
                 printf("disp menu 1 true\n");
-                isDisp_menu1=true;
-                isDisp_menu2=false;
+                // isDisp_menu1=true;
+                // isDisp_menu2=false;
+                if(Disp_menu_count>1){
+                    Disp_menu_count--;
+                }
                 disp_menu();
 
             }
@@ -516,11 +555,29 @@ void BTN_UPTask(void *param)
                 disp_setup();
             }
 
+            if(isDisp_pos)
+            {
+                if(pos_count>1){
+                    pos_count--;
+                    if(pos_count==1)
+                        {
+                            ssd1306_display_text(&dev, 3, " F-Front       ", 16, true);
+                            ssd1306_display_text(&dev, 5, " S-Side        ", 16, false);
+    
+                        }
+                    if(pos_count==2)
+                        {
+                            ssd1306_display_text(&dev, 3, " F-Front       ", 16, false);
+                            ssd1306_display_text(&dev, 5, " S-Side        ", 16, true);
+                        }
+                }
+            }
             
             xQueueReset(BTN_UPQueue);
         }
     }
 }
+
 
 void BTN_DOWNTask(void *params)
 {
@@ -535,8 +592,11 @@ void BTN_DOWNTask(void *params)
             printf("Down_button_works\n");
             if(isDisp_menu)
             {
-                isDisp_menu1=false;
-                isDisp_menu2=true;
+                // isDisp_menu1=false;
+                // isDisp_menu2=true;
+                if(Disp_menu_count<3){
+                    Disp_menu_count++;
+                }
                 disp_menu();
             }
             if(isDisp_setup)
@@ -547,6 +607,26 @@ void BTN_DOWNTask(void *params)
                     freq_list_index--;
                 }
                 disp_setup();
+            }
+
+            if(isDisp_pos)
+            {
+                if(pos_count<2){
+                    pos_count++;
+                    if(pos_count==1)
+                    {
+                        ssd1306_display_text(&dev, 3, " F-Front       ", 16, true);
+                        ssd1306_display_text(&dev, 5, " S-Side        ", 16, false);
+
+                    }
+                if(pos_count==2)
+                    {
+                        ssd1306_display_text(&dev, 3, " F-Front       ", 16, false);
+                        ssd1306_display_text(&dev, 5, " S-Side        ", 16, true);
+                    }
+
+                }
+
             }
 
             
@@ -607,7 +687,7 @@ void BTN_OKTask(void *params)
             printf("Ok button pressed\n");
             if(isDisp_menu)
             {
-                if(isDisp_menu1)
+                if(Disp_menu_count==1)
                 {
                     printf("disp setup true\n");
                     isDisp_setup=true;
@@ -616,8 +696,8 @@ void BTN_OKTask(void *params)
                     ssd1306_bitmaps(&dev, 0, 0, setup_1, 128, 64, false);
                     ssd1306_bitmaps(&dev, 106, 35,str_num[0], 16,9,false);
                     disp_setup();
-                }
-                if(isDisp_menu2)
+                } 
+                if(Disp_menu_count==3)
                 {
                     printf("disp walk true\n");
                     isDisp_walk=true;
@@ -626,8 +706,27 @@ void BTN_OKTask(void *params)
                     animation_running = true;
                     ssd1306_clear_screen(&dev, false);
                     ssd1306_display_text_x3(&dev, 0, " Walk", 6, false);
-                    ssd1306_display_text_x3(&dev, 4, " Mode", 6, false);
+                    printf("%d\n",animation_running);
+                }
 
+                if(Disp_menu_count==2)
+                {
+                    ssd1306_clear_screen(&dev, false);
+                    isDisp_pos = true;
+                    isDisp_walk=false;
+                    isDisp_menu=false;
+                    isDisp_setup=false;
+                    if(pos_count==1)
+                    {
+                        ssd1306_display_text(&dev, 3, " F-Front       ", 16, true);
+                        ssd1306_display_text(&dev, 5, " S-Side        ", 16, false);
+                    }
+                    if(pos_count==2)
+                    {
+                        ssd1306_display_text(&dev, 3, " F-Front       ", 16, false);
+                        ssd1306_display_text(&dev, 5, " S-Side        ", 16, true);
+                    }
+                    
                 }
             }
 
@@ -647,9 +746,17 @@ void BTN_OKTask(void *params)
                 disp_menu();
             }
             
+            else if(isDisp_pos)
+            {
+                isDisp_pos = false;
+                ssd1306_clear_screen(&dev, false);
+                disp_menu();
+            }
+
             xQueueReset(BTN_OKQueue);
 
         }
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 }
 
@@ -663,7 +770,7 @@ while(1)
     //     ESP_LOGI(TAG, "State of Charge: %.2f%%", soc);
 
     // }
-    vTaskDelay(5000/portTICK_PERIOD_MS);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
 
 }
 }
